@@ -15,6 +15,13 @@
       "when": 1792812171933,
       "tag": "0001_tidy_blonde_phantom",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1792813938730,
+      "tag": "0002_organic_tattoo",
+      "breakpoints": true
     }
   ]
 }

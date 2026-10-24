@@ -65,3 +65,7 @@ Proyek backend performa tinggi yang dibangun menggunakan runtime [Bun](https://b
   - **Body**: `{ "name": "Eko", "email": "eko@localhost", "password": "rahasia" }`
   - **Response Sukses (201)**: `{ "data": "OK" }`
   - **Response Error (400)**: `{ "error": "Email sudah terdaftar" }`
+- `POST /api/users/login` : Login pengguna & penerbitan token sesi.
+  - **Body**: `{ "email": "eko@localhost", "password": "rahasia" }`
+  - **Response Sukses (200)**: `{ "data": "<uuid-token>" }`
+  - **Response Error (400)**: `{ "error": "Email atau password salah" }`

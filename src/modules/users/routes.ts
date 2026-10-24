@@ -1,6 +1,6 @@
 import { Elysia, t } from "elysia";
 import { db } from "../../db";
-import { users } from "../../db/schema";
+import { users, sessions } from "../../db/schema";
 import { eq } from "drizzle-orm";
 
 export const userRoutes = new Elysia({ prefix: "/api/users" })
@@ -43,6 +43,54 @@ export const userRoutes = new Elysia({ prefix: "/api/users" })
     {
       body: t.Object({
         name: t.String({ minLength: 1 }),
+        email: t.String({ pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$|^[^\\s@]+@localhost$|^[^\\s@]+@locahost$" }),
+        password: t.String({ minLength: 1 }),
+      }),
+    }
+  )
+  .post(
+    "/login",
+    async ({ body, set }) => {
+      // 1. Cari user berdasarkan email
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, body.email))
+        .limit(1);
+
+      if (!user) {
+        set.status = 400;
+        return {
+          error: "Email atau password salah",
+        };
+      }
+
+      // 2. Verifikasi password dengan hash bcrypt
+      const isPasswordMatch = await Bun.password.verify(body.password, user.password);
+      if (!isPasswordMatch) {
+        set.status = 400;
+        return {
+          error: "Email atau password salah",
+        };
+      }
+
+      // 3. Generate token UUID untuk session
+      const token = crypto.randomUUID();
+
+      // 4. Simpan session baru ke tabel sessions
+      await db.insert(sessions).values({
+        token,
+        userId: user.id,
+      });
+
+      // 5. Response sukses dengan data token
+      set.status = 200;
+      return {
+        data: token,
+      };
+    },
+    {
+      body: t.Object({
         email: t.String({ pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$|^[^\\s@]+@localhost$|^[^\\s@]+@locahost$" }),
         password: t.String({ minLength: 1 }),
       }),
