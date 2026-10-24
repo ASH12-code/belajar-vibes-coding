@@ -43,7 +43,7 @@ export const userRoutes = new Elysia({ prefix: "/api/users" })
     {
       body: t.Object({
         name: t.String({ minLength: 1 }),
-        email: t.String({ format: "email" }),
+        email: t.String({ pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$|^[^\\s@]+@localhost$|^[^\\s@]+@locahost$" }),
         password: t.String({ minLength: 1 }),
       }),
     }
