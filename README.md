@@ -61,6 +61,7 @@ Proyek backend performa tinggi yang dibangun menggunakan runtime [Bun](https://b
 ## 📡 Endpoint Utama
 - `GET /` : Endpoint selamat datang / root check.
 - `GET /health` : Healthcheck server beserta status koneksi ke MySQL.
-- `GET /users` : Mengambil daftar seluruh user.
-- `GET /users/:id` : Mengambil detail user berdasarkan ID.
-- `POST /users` : Menambahkan user baru (body: `{ "name": "string", "email": "user@example.com" }`).
+- `POST /api/users` : Registrasi pengguna baru.
+  - **Body**: `{ "name": "Eko", "email": "eko@localhost", "password": "rahasia" }`
+  - **Response Sukses (201)**: `{ "data": "OK" }`
+  - **Response Error (400)**: `{ "error": "Email sudah terdaftar" }`
