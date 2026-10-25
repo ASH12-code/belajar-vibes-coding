@@ -10,7 +10,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "typecheck": "bun check"
+    "typecheck": "bun check",
+    "test": "bun test"
   },
   "devDependencies": {
     "@types/bun": "latest",

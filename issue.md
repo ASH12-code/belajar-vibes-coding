@@ -1,125 +1,90 @@
-# Issue: Implementasi Endpoint Logout Pengguna (`DELETE /api/users/logout`)
+# Issue: Implementasi Automated Unit & Integration Test untuk Seluruh API
 
 ## 1. Ringkasan & Tujuan
-Membuat fitur penghentian sesi pengguna (*User Logout*). Endpoint ini memvalidasi token sesi (*session token*) yang dikirim melalui HTTP Header `Authorization: Bearer <token>`, memverifikasi keberadaan token pada tabel `sessions`, lalu menghapus data sesi tersebut dari database MySQL agar token tidak dapat digunakan kembali.
+Menyusun rangkaian automated test yang komprehensif untuk seluruh endpoint API yang tersedia di dalam aplikasi. Pengujian dilakukan menggunakan runner bawaan **Bun** (`bun test`) dan disimpan di dalam folder khusus `tests/`.
 
-Dokumen ini disusun sebagai panduan langkah-demi-langkah (*step-by-step implementation guide*) tingkat tinggi yang mudah dipahami oleh pengembang junior maupun model AI pelaksana.
+Tujuan utama adalah memastikan seluruh fungsionalitas, validasi input, autentikasi sesi, serta penanganan error berjalan sesuai spesifikasi dan terbebas dari regresi (*regression-free*).
 
----
-
-## 2. Spesifikasi Teknis
-
-### A. Spesifikasi API Endpoint
-- **URL**: `DELETE /api/users/logout`
-- **Method**: `DELETE`
-- **Headers**:
-  - `Authorization`: `Bearer <token>` *(Wajib)*
-
-### B. Spesifikasi Response
-
-#### 1. Response Body (Sukses - HTTP 200)
-Jika token valid dan data sesi berhasil dihapus dari database:
-```json
-{
-  "data": "OK"
-}
-```
-
-#### 2. Response Body (Error - HTTP 401 Unauthorized)
-Jika:
-- Header `Authorization` tidak dikirim atau tidak diawali format `Bearer `.
-- Token kosong atau tidak ditemukan di dalam tabel `sessions` (misal: token palsu atau sudah pernah logout sebelumnya).
-
-Kembalikan format response:
-```json
-{
-  "error": "Unauthorized"
-}
-```
+Dokumen ini disusun sebagai panduan perencanaan tingkat tinggi (*high-level test specification*) yang memetakan seluruh skenario pengujian tanpa instruksi kode yang terlalu mendetail, sehingga dapat diimplementasikan oleh junior programmer atau model AI pelaksana.
 
 ---
 
-## 3. Langkah-Langkah Implementasi (Step-by-Step)
+## 2. Ketentuan Umum & Strategi Testing
 
-### Langkah 1: Ekstraksi & Validasi Header Authorization
-1. Tangkap header `authorization` dari request context Elysia.
-2. Periksa apakah header tersedia dan berawalan string `"Bearer "`.
-3. Jika header tidak tersedia atau format tidak valid:
-   - Atur HTTP status menjadi `401`.
-   - Kembalikan response: `{ "error": "Unauthorized" }`.
-4. Ekstrak string token murni dengan memotong awalan `"Bearer "`:
-   ```typescript
-   const token = authorization.slice(7).trim();
-   ```
-
----
-
-### Langkah 2: Verifikasi & Hapus Sesi di Database (Drizzle ORM)
-1. Buka file [src/modules/users/routes.ts](file:///d:/coding/vibeCoding/src/modules/users/routes.ts).
-2. Tambahkan handler route `.delete("/logout", async ({ headers, set }) => { ... })`.
-3. Eksekusi query penghapusan data sesi dari tabel `sessions`:
-   ```typescript
-   const [deleteResult] = await db
-     .delete(sessions)
-     .where(eq(sessions.token, token));
-
-   if (deleteResult.affectedRows === 0) {
-     set.status = 401;
-     return {
-       error: "Unauthorized",
-     };
-   }
-   ```
-4. Kembalikan response sukses:
-   - Atur HTTP status menjadi `200`.
-   - Kembalikan: `{ "data": "OK" }`.
+1. **Lokasi File Test**:
+   - Seluruh file pengujian harus ditempatkan di dalam folder `tests/` (misal: `tests/users.test.ts` atau `tests/api.test.ts`).
+2. **Framework & Runner**:
+   - Menggunakan `bun test` bawaan runtime Bun (`describe`, `test`, `expect`, `beforeEach`, `afterAll`).
+3. **Isolasi & Pembersihan Data (Database Cleanup)**:
+   - Setiap pengujian harus bersifat independen dan konsisten (*idempotent*).
+   - Wajib melakukan pembersihan data (hapus data pada tabel `sessions` dan `users`) sebelum setiap skenario dijalankan (misal menggunakan hook `beforeEach`), agar tidak ada data sisa yang mengganggu pengujian berikutnya.
+   - Pastikan koneksi database ditutup dengan benar di akhir pengujian (`afterAll`) jika diperlukan.
+4. **Eksekusi Request**:
+   - Manfaatkan kemampuan pengujian native Elysia menggunakan `app.handle(new Request(...))` untuk menguji endpoint secara cepat dan presisi.
 
 ---
 
-### Langkah 3: Pengujian & Validasi
+## 3. Cakupan Skenario Pengujian per Endpoint
 
-1. **Pemeriksaan Tipe TypeScript**:
-   Pastikan tidak ada error kompilasi:
-   ```bash
-   bun run typecheck
-   ```
+Berikut adalah daftar skenario yang wajib diuji untuk setiap API:
 
-2. **Unit / Contract Testing**:
-   Tambahkan test case di [src/modules/users/routes.test.ts](file:///d:/coding/vibeCoding/src/modules/users/routes.test.ts) untuk memverifikasi penolakan request tanpa header atau format salah:
-   ```bash
-   bun test
-   ```
+### A. Root & Utility Endpoints
+1. **Endpoint `GET /`**:
+   - **Skenario 1.1**: Respon sukses mengembalikan status HTTP `200` dan pesan sambutan (*welcome message*).
+2. **Endpoint `GET /health`**:
+   - **Skenario 1.2**: Respon sukses mengembalikan status HTTP `200`, status database `connected`, dan uptime aplikasi.
 
-3. **Uji Coba Manual / End-to-End**:
-   - **Skenario 1 (Tanpa Header Authorization)**:
-     ```bash
-     curl -i -X DELETE http://localhost:3000/api/users/logout
-     ```
-     *Ekspektasi: HTTP 401 `{ "error": "Unauthorized" }`*
+---
 
-   - **Skenario 2 (Token Palsu / Tidak Terdaftar)**:
-     ```bash
-     curl -i -X DELETE http://localhost:3000/api/users/logout -H "Authorization: Bearer token-asal"
-     ```
-     *Ekspektasi: HTTP 401 `{ "error": "Unauthorized" }`*
+### B. Registrasi Pengguna (`POST /api/users`)
+1. **Skenario Sukses**:
+   - **Skenario 2.1**: Registrasi dengan data valid (nama, email, password) mengembalikan status HTTP `201` dan body `{ "data": "OK" }`.
+   - **Skenario 2.2**: Memastikan data user tersimpan di database dan password tersimpan dalam format hash bcrypt (bukan teks polos).
+2. **Skenario Gagal & Validasi Input**:
+   - **Skenario 2.3 (Email Duplikat)**: Registrasi dengan email yang sudah ada di database mengembalikan status HTTP `400` dan body `{ "error": "Email sudah terdaftar" }`.
+   - **Skenario 2.4 (Format Email Tidak Valid)**: Request dengan email yang tidak sesuai format mengembalikan status HTTP `422`.
+   - **Skenario 2.5 (Nama Melebihi Batas)**: Request dengan nama lebih dari 255 karakter mengembalikan status HTTP `422`.
+   - **Skenario 2.6 (Field Tidak Lengkap/Kosong)**: Request tanpa field wajib (misal tanpa password atau tanpa nama) mengembalikan status HTTP `422`.
 
-   - **Skenario 3 (Logout Sukses & Invalidation Check)**:
-     1. Login user via `POST /api/users/login` dan salin token sesi UUID.
-     2. Panggil logout:
-        ```bash
-        curl -i -X DELETE http://localhost:3000/api/users/logout -H "Authorization: Bearer <token-uuid>"
-        ```
-        *Ekspektasi: HTTP 200 `{ "data": "OK" }`*
-     3. Verifikasi pada database MySQL bahwa token tersebut telah hilang dari tabel `sessions`.
-     4. Coba panggil kembali `GET /api/users/current` atau `DELETE /api/users/logout` menggunakan token yang sama.
-        *Ekspektasi: Menghasilkan HTTP 401 `{ "error": "Unauthorized" }` (karena token sudah tidak berlaku).*
+---
+
+### C. Login Pengguna (`POST /api/users/login`)
+1. **Skenario Sukses**:
+   - **Skenario 3.1**: Login dengan kredensial benar mengembalikan status HTTP `200` dan token sesi UUID pada field `data`.
+   - **Skenario 3.2**: Memastikan token sesi yang diterbitkan benar-benar tersimpan di tabel `sessions` dan terhubung dengan user yang bersangkutan.
+2. **Skenario Gagal & Validasi**:
+   - **Skenario 3.3 (Email Tidak Terdaftar)**: Login dengan email yang belum ada di database mengembalikan status HTTP `400` dan body `{ "error": "Email atau password salah" }`.
+   - **Skenario 3.4 (Password Salah)**: Login dengan email benar namun password salah mengembalikan status HTTP `400` dan body `{ "error": "Email atau password salah" }`.
+   - **Skenario 3.5 (Request Body Tidak Valid)**: Request tanpa email atau tanpa password mengembalikan status HTTP `422`.
+
+---
+
+### D. Get Current User (`GET /api/users/current`)
+1. **Skenario Sukses**:
+   - **Skenario 4.1**: Request dengan header `Authorization: Bearer <valid-token>` mengembalikan status HTTP `200` beserta profil pengguna (`id`, `name`, `email`, `created_at`).
+   - **Skenario 4.2 (Security Check)**: Memastikan field `password` sama sekali tidak disertakan/terekspos di dalam respon data profil.
+2. **Skenario Gagal & Otorisasi**:
+   - **Skenario 4.3 (Tanpa Header)**: Request tanpa header `Authorization` mengembalikan status HTTP `401` dan body `{ "error": "Unauthorized" }`.
+   - **Skenario 4.4 (Format Header Salah)**: Header tidak diawali dengan skema `Bearer ` (misal `Basic ...` atau string acak) mengembalikan status HTTP `401` dan body `{ "error": "Unauthorized" }`.
+   - **Skenario 4.5 (Token Tidak Terdaftar / Palsu)**: Mengirim token acak yang tidak tercatat di tabel `sessions` mengembalikan status HTTP `401` dan body `{ "error": "Unauthorized" }`.
+
+---
+
+### E. Logout Pengguna (`DELETE /api/users/logout`)
+1. **Skenario Sukses**:
+   - **Skenario 5.1**: Request dengan header `Authorization: Bearer <valid-token>` mengembalikan status HTTP `200` dan body `{ "data": "OK" }`.
+   - **Skenario 5.2 (Pembersihan Sesi)**: Memastikan record token tersebut telah terhapus dari tabel `sessions` di database.
+   - **Skenario 5.3 (Invalidasi Token)**: Token yang sudah di-logout tidak dapat digunakan kembali untuk mengakses `GET /api/users/current` maupun logout ulang (keduanya harus mengembalikan status HTTP `401`).
+2. **Skenario Gagal & Otorisasi**:
+   - **Skenario 5.4 (Tanpa Header)**: Request tanpa header `Authorization` mengembalikan status HTTP `401` dan body `{ "error": "Unauthorized" }`.
+   - **Skenario 5.5 (Token Tidak Terdaftar)**: Request dengan token palsu atau token yang sudah dihapus mengembalikan status HTTP `401` dan body `{ "error": "Unauthorized" }`.
 
 ---
 
 ## 4. Kriteria Selesai (Definition of Done)
-- [ ] Endpoint `DELETE /api/users/logout` diimplementasikan pada `src/modules/users/routes.ts`.
-- [ ] Header `Authorization: Bearer <token>` divalidasi dengan benar.
-- [ ] Request tanpa header atau dengan token tidak terdaftar mengembalikan status HTTP 401 `{ "error": "Unauthorized" }`.
-- [ ] Request dengan token valid menghapus record terkait dari tabel `sessions` dan mengembalikan status HTTP 200 `{ "data": "OK" }`.
-- [ ] Token yang telah di-logout tidak dapat digunakan lagi untuk mengakses `GET /api/users/current`.
-- [ ] `bun run typecheck` dan `bun test` berjalan tanpa error.
+- [ ] Folder `tests/` telah dibuat dan berisi berkas pengujian API.
+- [ ] Database cleanup logic (`beforeEach`) diterapkan agar data selalu bersih sebelum setiap pengujian.
+- [ ] Seluruh skenario pengujian pada bagian 3 (A, B, C, D, E) telah terimplementasi.
+- [ ] Perintah `bun test` dapat dijalankan berulang kali dengan hasil 100% lulus (*all tests passing*).
+- [ ] Tidak ada dependensi urutan (*test order dependency*) antar skenario pengujian.
+- [ ] `bun run typecheck` berjalan tanpa error tipe TypeScript.
