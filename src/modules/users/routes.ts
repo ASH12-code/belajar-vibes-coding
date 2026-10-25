@@ -141,4 +141,48 @@ export const userRoutes = new Elysia({ prefix: "/api/users" })
         data: result,
       };
     }
+  )
+  .delete(
+    "/logout",
+    async ({ headers, set }) => {
+      const authorization = headers["authorization"] || headers.authorization;
+
+      if (!authorization || !authorization.startsWith("Bearer ")) {
+        set.status = 401;
+        return {
+          error: "Unauthorized",
+        };
+      }
+
+      const token = authorization.slice(7).trim();
+      if (!token) {
+        set.status = 401;
+        return {
+          error: "Unauthorized",
+        };
+      }
+
+      // 1. Cek apakah token ada di database
+      const [session] = await db
+        .select()
+        .from(sessions)
+        .where(eq(sessions.token, token))
+        .limit(1);
+
+      if (!session) {
+        set.status = 401;
+        return {
+          error: "Unauthorized",
+        };
+      }
+
+      // 2. Hapus token session dari database
+      await db.delete(sessions).where(eq(sessions.token, token));
+
+      // 3. Response sukses
+      set.status = 200;
+      return {
+        data: "OK",
+      };
+    }
   );

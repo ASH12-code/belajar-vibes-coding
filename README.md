@@ -73,3 +73,7 @@ Proyek backend performa tinggi yang dibangun menggunakan runtime [Bun](https://b
   - **Header**: `Authorization: Bearer <token>`
   - **Response Sukses (200)**: `{ "data": { "id": 1, "name": "Eko", "email": "eko@localhost", "created_at": "..." } }`
   - **Response Error (401)**: `{ "error": "Unauthorized" }`
+- `DELETE /api/users/logout` : Logout pengguna & penghapusan token sesi.
+  - **Header**: `Authorization: Bearer <token>`
+  - **Response Sukses (200)**: `{ "data": "OK" }`
+  - **Response Error (401)**: `{ "error": "Unauthorized" }`
