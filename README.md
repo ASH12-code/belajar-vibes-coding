@@ -69,3 +69,7 @@ Proyek backend performa tinggi yang dibangun menggunakan runtime [Bun](https://b
   - **Body**: `{ "email": "eko@localhost", "password": "rahasia" }`
   - **Response Sukses (200)**: `{ "data": "<uuid-token>" }`
   - **Response Error (400)**: `{ "error": "Email atau password salah" }`
+- `GET /api/users/current` : Mengambil data profil pengguna yang sedang login.
+  - **Header**: `Authorization: Bearer <token>`
+  - **Response Sukses (200)**: `{ "data": { "id": 1, "name": "Eko", "email": "eko@localhost", "created_at": "..." } }`
+  - **Response Error (401)**: `{ "error": "Unauthorized" }`

@@ -95,4 +95,50 @@ export const userRoutes = new Elysia({ prefix: "/api/users" })
         password: t.String({ minLength: 1 }),
       }),
     }
+  )
+  .get(
+    "/current",
+    async ({ headers, set }) => {
+      const authorization = headers["authorization"] || headers.authorization;
+
+      if (!authorization || !authorization.startsWith("Bearer ")) {
+        set.status = 401;
+        return {
+          error: "Unauthorized",
+        };
+      }
+
+      const token = authorization.slice(7).trim();
+      if (!token) {
+        set.status = 401;
+        return {
+          error: "Unauthorized",
+        };
+      }
+
+      // Cari user dan session yang cocok
+      const [result] = await db
+        .select({
+          id: users.id,
+          name: users.name,
+          email: users.email,
+          created_at: users.createdAt,
+        })
+        .from(sessions)
+        .innerJoin(users, eq(sessions.userId, users.id))
+        .where(eq(sessions.token, token))
+        .limit(1);
+
+      if (!result) {
+        set.status = 401;
+        return {
+          error: "Unauthorized",
+        };
+      }
+
+      set.status = 200;
+      return {
+        data: result,
+      };
+    }
   );

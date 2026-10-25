@@ -34,4 +34,31 @@ describe("User Routes API Unit / Contract Test", () => {
 
     expect(res.status).toBe(422);
   });
+
+  test("GET /current: tanpa header Authorization harus 401 Unauthorized", async () => {
+    const res = await app.handle(
+      new Request("http://localhost/api/users/current", {
+        method: "GET",
+      })
+    );
+
+    expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body).toEqual({ error: "Unauthorized" });
+  });
+
+  test("GET /current: format header bukan Bearer harus 401 Unauthorized", async () => {
+    const res = await app.handle(
+      new Request("http://localhost/api/users/current", {
+        method: "GET",
+        headers: {
+          Authorization: "Basic dXNlcjpwYXNz",
+        },
+      })
+    );
+
+    expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body).toEqual({ error: "Unauthorized" });
+  });
 });
