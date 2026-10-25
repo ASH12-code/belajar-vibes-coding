@@ -3,6 +3,15 @@ import { db } from "../../db";
 import { users, sessions } from "../../db/schema";
 import { eq } from "drizzle-orm";
 
+// Helper untuk mengekstrak Bearer token dari header request (DRY principle)
+export const extractBearerToken = (authorization?: string): string | null => {
+  if (!authorization || !authorization.startsWith("Bearer ")) {
+    return null;
+  }
+  const token = authorization.slice(7).trim();
+  return token || null;
+};
+
 export const userRoutes = new Elysia({ prefix: "/api/users" })
   .post(
     "/",
@@ -100,15 +109,8 @@ export const userRoutes = new Elysia({ prefix: "/api/users" })
     "/current",
     async ({ headers, set }) => {
       const authorization = headers["authorization"] || headers.authorization;
+      const token = extractBearerToken(authorization);
 
-      if (!authorization || !authorization.startsWith("Bearer ")) {
-        set.status = 401;
-        return {
-          error: "Unauthorized",
-        };
-      }
-
-      const token = authorization.slice(7).trim();
       if (!token) {
         set.status = 401;
         return {
@@ -139,6 +141,38 @@ export const userRoutes = new Elysia({ prefix: "/api/users" })
       set.status = 200;
       return {
         data: result,
+      };
+    }
+  )
+  .delete(
+    "/logout",
+    async ({ headers, set }) => {
+      const authorization = headers["authorization"] || headers.authorization;
+      const token = extractBearerToken(authorization);
+
+      if (!token) {
+        set.status = 401;
+        return {
+          error: "Unauthorized",
+        };
+      }
+
+      // Hapus token session langsung dan cek affectedRows (optimasi single query roundtrip)
+      const [deleteResult] = await db
+        .delete(sessions)
+        .where(eq(sessions.token, token));
+
+      if (deleteResult.affectedRows === 0) {
+        set.status = 401;
+        return {
+          error: "Unauthorized",
+        };
+      }
+
+      // Response sukses
+      set.status = 200;
+      return {
+        data: "OK",
       };
     }
   );

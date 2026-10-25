@@ -61,4 +61,31 @@ describe("User Routes API Unit / Contract Test", () => {
     const body = await res.json();
     expect(body).toEqual({ error: "Unauthorized" });
   });
+
+  test("DELETE /logout: tanpa header Authorization harus 401 Unauthorized", async () => {
+    const res = await app.handle(
+      new Request("http://localhost/api/users/logout", {
+        method: "DELETE",
+      })
+    );
+
+    expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body).toEqual({ error: "Unauthorized" });
+  });
+
+  test("DELETE /logout: format header bukan Bearer harus 401 Unauthorized", async () => {
+    const res = await app.handle(
+      new Request("http://localhost/api/users/logout", {
+        method: "DELETE",
+        headers: {
+          Authorization: "Basic token-test",
+        },
+      })
+    );
+
+    expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body).toEqual({ error: "Unauthorized" });
+  });
 });
