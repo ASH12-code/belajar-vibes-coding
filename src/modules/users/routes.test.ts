@@ -21,6 +21,22 @@ describe("User Routes API Unit / Contract Test", () => {
     expect(res.status).toBe(422);
   });
 
+  test("Validasi input registrasi: nama lebih dari 255 karakter harus ditolak (422)", async () => {
+    const res = await app.handle(
+      new Request("http://localhost/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "A".repeat(300),
+          email: "valid@localhost",
+          password: "rahasia",
+        }),
+      })
+    );
+
+    expect(res.status).toBe(422);
+  });
+
   test("Validasi input login: request body tanpa password harus ditolak", async () => {
     const res = await app.handle(
       new Request("http://localhost/api/users/login", {
